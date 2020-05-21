@@ -3,14 +3,25 @@
 
 #include "core.hpp"
 
+typedef enum CState : uint8_t
+{
+    C_INVALID,
+    C_WORKING,
+    C_RECOVERY
+} CState;
+
 class Coordinator
 {
 private:
 
     // global trasation id
-    txid TXID;
+    txid _TXID;
 
+    // the state of the coordinator
+    CState _state;
+    
     // the participant list
+
 
     // the client task pool
 

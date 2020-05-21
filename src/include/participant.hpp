@@ -8,7 +8,10 @@ class Participant
 private:
 
     // the local txid
-    txid TXID;
+    txid _TXID;
+
+    // the state of the node
+    NodeState _state;
 
     // the log
 

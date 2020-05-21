@@ -62,4 +62,21 @@
 
 typedef uint64_t txid;
 
+typedef enum NodeState : uint8_t
+{
+    NODE_INVALID,
+    NODE_WORKING,
+    NODE_RECOVERY,
+    NODE_WAITING
+} PState;
+
+typedef enum WorkState : uint8_t
+{
+    WORK_INVALID,
+    WORK_PRE,
+    WORK_COMMIT,
+    WORK_DONE,
+    WORK_ABORT
+} WorkState;
+
 #endif
