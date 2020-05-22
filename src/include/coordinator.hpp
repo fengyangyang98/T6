@@ -19,11 +19,14 @@ private:
 
     // the state of the coordinator
     CState _state;
-    
+
     // the participant list
 
 
     // the client task pool
+
+
+    // the logger
 
 
 public:
@@ -35,5 +38,5 @@ public:
 
     int Working();
 };
-
+                
 #endif

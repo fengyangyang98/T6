@@ -10,10 +10,8 @@
    You should have received a copy of the GNU Affero General Public License
    along with this program. If not, see <http://www.gnu.org/license/>.
 *******************************************************************************/
-#include "../../include/core.hpp"
-#include "../../include/pd.hpp"
-#include "../../third_party/ossSocket/ossSocket.hpp"
-
+#include "ossSocket.hpp"
+#include "pd.hpp"
 
 // Create a listening socket
 _ossSocket::_ossSocket ( unsigned int port, int timeout )
@@ -341,7 +339,7 @@ error :
    goto done ;
 }
 
-int _ossSocket::recvNF ( char *pMsg, int len,
+int _ossSocket::recvNF ( char *pMsg, int & len,
                          int timeout )
 {
    int rc = KV_OK ;

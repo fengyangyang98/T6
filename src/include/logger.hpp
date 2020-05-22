@@ -24,9 +24,6 @@ typedef enum logState : uint8_t
 
 /*
         The log's format is like this:
-        *
-        [ Size  ] : the size will be add when it convert into a package
-        *
         [ ID    ]
         [ STATE ]
         [ EVENT ]

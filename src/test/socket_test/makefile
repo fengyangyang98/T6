@@ -17,7 +17,7 @@ server : $(SERVEROBJS)
 server.o : server.cpp
 	$(CPP) $(CXXFLAGS) -c $^ $(LIBS) $(INCLUDE)
 
-ossSocket.o : ossSocket.cpp
+ossSocket.o : ../../ossSocket.cc
 	$(CPP) $(CXXFLAGS) -c $^ $(LIBS) $(INCLUDE)
 
 PHONY: clean

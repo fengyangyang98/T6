@@ -45,20 +45,15 @@
 #define KV_OK                                           0
 #define KV_IO                                          -1
 #define KV_INVALIDARG                                  -2
-#define KV_PERM                                        -3
-#define KV_OOM                                         -4
-#define KV_SYS                                         -5
-#define KV_PMD_HELP_ONLY                               -6
-#define KV_PMD_FORCE_SYSTEM_EDU                        -7
-#define KV_TIMEOUT                                     -8
-#define KV_QUIESCED                                    -9
-#define KV_EDU_INVAL_STATUS                            -10
-#define KV_NETWORK                                     -11
-#define KV_NETWORK_CLOSE                               -12
+#define KV_TIMEOUT                                     -3
+#define KV_QUIESCED                                    -4
+#define KV_EDU_INVAL_STATUS                            -5
+#define KV_NETWORK                                     -6
+#define KV_NETWORK_CLOSE                               -7
 
-#define KV_SET                                         -13
-#define KV_GET                                         -14
-#define KV_DEL                                         -15
+#define KV_SET                                         -8
+#define KV_GET                                         -9
+#define KV_DEL                                         -10
 
 typedef uint64_t txid;
 

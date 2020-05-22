@@ -60,7 +60,7 @@ enum PDLEVEL
    PDDEBUG
 } ;
 
-extern PDLEVEL _curPDLevel ;
+PDLEVEL _curPDLevel = PDSEVERE;
 const char *getPDLevelDesp ( PDLEVEL level ) ;
 
 #define PD_DFT_DIAGLEVEL PDWARNING

@@ -5,19 +5,38 @@ int main()
 {
     int clientSocket;
     sockaddr ip;
+    int rc;
 
-    ossSocket server("127.0.0.1", 8001);
+    ossSocket server(8001);
 
     server.initSocket();
     server.bind_listen();
-    server.accept((SOCKET *)&clientSocket, NULL, NULL, 10000000);
+    while(1) 
+    {
+        rc = server.accept((SOCKET *)&clientSocket, NULL, NULL, 10000);
+        if(rc == KV_TIMEOUT) continue;
+        else break;
+    }
 
-    ossSocket client((SOCKET *)&clientSocket);
+    server.close();
+    ossSocket * client;
+    client = new ossSocket((SOCKET *)&clientSocket);
 
-    char * p = new char[10];
-    client.recv(p, 10, 10000000);
-    std::string msg(p, 10);
-    std::cout << msg;
+    char * a = new char[30];
+    client->getPeerAddress(a, 30);
+    std::cout << a << " : "<< client->getPeerPort() << std::endl;
+    delete[] a;
 
-    delete[] p;
+    char * p = new char[100];
+    memset(p, 0, 100);
+    int len = 100;
+    std::cout << client->recvNF(p, len, 100000) << std::endl;
+    std::string msg(p, len);
+
+    std::cout << msg << " " << len << std::endl;
+
+    std::cout<<client->send(msg.c_str(), msg.length(), 100000) << std::endl;
+    
+    delete client;
+    // delete[] p;
 }

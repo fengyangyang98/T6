@@ -13,7 +13,7 @@
 #ifndef OSSSOCKET_HPP__
 #define OSSSOCKET_HPP__
 
-#include "core.hpp"
+#include "../../include/core.hpp"
 
 #ifdef _WINDOWS
 #define SOCKET_GETLASTERROR WSAGetLastError()
@@ -77,7 +77,7 @@ public :
    int recv ( char *pMsg, int len,
               int timeout = OSS_SOCKET_DFT_TIMEOUT,
               int flags = 0 ) ;
-   int recvNF ( char *pMsg, int len,
+   int recvNF ( char *pMsg, int & len,
                 int timeout = OSS_SOCKET_DFT_TIMEOUT ) ;
    int connect () ;
    void close () ;

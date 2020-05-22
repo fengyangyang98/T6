@@ -3,11 +3,22 @@
 
 int main()
 {
-    ossSocket client("127.0.0.1", 8001);
+    std::string add = "127.0.0.1";
+    ossSocket client;
+    client = ossSocket(add.c_str(), 8001);
     client.initSocket();
-    client.connect();
+    while( client.connect() ) {
 
-    std::string msg = "1234567890";
-
-    client.send(msg.c_str(), 10, 10000000);
+    }
+    
+    std::string msg = "1234560";
+    std::cout<<client.send(msg.c_str(), msg.length(), 100000000) << std::endl;
+    sleep(3);
+    char * p = new char[10];
+    while(client.recv(p, 10, 100000) != KV_NETWORK_CLOSE) {
+        
+        std::cout<<client.recv(p, 10, 100000) << std::endl;
+        std::string msg2(p, 10);
+        std::cout << msg2;
+    }
 }
