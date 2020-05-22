@@ -11,14 +11,13 @@ int main()
 
     }
     
-    std::string msg = "1234560";
+    std::string msg = "*2\r\n$5\r\nCloud\r\n$9\r\nComputing\r\n";
     std::cout<<client.send(msg.c_str(), msg.length(), 100000000) << std::endl;
-    sleep(3);
-    char * p = new char[10];
-    while(client.recv(p, 10, 100000) != KV_NETWORK_CLOSE) {
-        
-        std::cout<<client.recv(p, 10, 100000) << std::endl;
-        std::string msg2(p, 10);
-        std::cout << msg2;
-    }
+
+    char * p = new char[200];
+    int len = 200;
+    while(client.recvNF(p, len, 100000)) {}
+
+    std::string msg2(p, len);
+    std::cout << msg2;
 }
