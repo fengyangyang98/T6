@@ -15,6 +15,7 @@ add_executable( kvstore2pcsystem
                 ./src/kv.cc
                 ./src/network.cc
                 ./src/ossSocket.cc
+                ./src/coordinator.cc
 
                 ./src/test/parser_test.cc
                 ./src/test/kv_test.cc

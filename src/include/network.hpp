@@ -33,7 +33,7 @@ private:
 
     std::string NETWORK_CON_PACK = "~" + numtob<uint64_t>(0);
 
-    ossSocket * _peer;
+    ossSocket * _peer = nullptr;
 
     // for the coordinator
     std::string _peerAddress;
@@ -43,6 +43,7 @@ private:
     unsigned int _port;
 
 public:
+    Network() {}
     Network(std::string address, unsigned int port) 
     {
         _peerAddress = address;
@@ -55,8 +56,23 @@ public:
         _port = port;
     }
 
+    ~Network()
+    {
+        close();
+    }
+
     // common use
-    int close();
+    int close() {
+        if(_peer != nullptr) {
+            delete _peer;
+            _peer = nullptr;
+        }
+        return KV_OK;
+    }
+
+    int recvCommand(std::vector<std::string> & content);
+    int sendResult(std::string str);
+    int acceptWithoutCloseBind();
 
     // for the participant
     int send(std::string msg);

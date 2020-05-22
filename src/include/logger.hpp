@@ -55,6 +55,7 @@ private:
     std::map<txid, Log> _l;
 public:
     int writeLog(txid ID, logState state, std::string event);
+    // int writeLog(txid ID, std::vector<std::string> str);
     int chageLogState(txid ID, logState newState);
 };
 

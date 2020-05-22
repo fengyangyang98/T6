@@ -9,7 +9,6 @@ void network_client_test()
     std::cout << client.sendAndRecv("Hello, I am client!", rmsg) << std::endl;
     std::cout << rmsg << std::endl;
 
-    sleep(3);
 }
 
 void network_server_test()
@@ -22,5 +21,5 @@ void network_server_test()
     std::cout << rmsg << std::endl;
 
     std::cout << server.send("Hi, I am server!") << std::endl;
-    sleep(3);
+
 }

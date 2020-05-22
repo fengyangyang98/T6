@@ -16,6 +16,7 @@ private:
     // the log
 
 public:
+    Participant();
 
     int Init();
 

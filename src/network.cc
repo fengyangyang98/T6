@@ -1,6 +1,175 @@
 #include "core.hpp"
 #include "network.hpp"
 #include "util.hpp"
+
+int Network::recvCommand(std::vector<std::string> & str)
+{
+    int rc = KV_OK;
+
+    std::string content;
+    content = "";
+
+    uint64_t str_num = 0;
+    
+    std::string headerBuf;
+    std::string header = "";
+    
+    uint64_t contentLen = 0;
+
+    char * headerptr = new char[2];
+    memset(headerptr, 0, 2);
+    char * contentptr = nullptr;
+
+    // receve the line string number
+    int step = 0;
+    while(1)
+    {
+        int recvLen = 1;
+
+        rc = _peer->recvNF(headerptr, recvLen, 1000000);
+        if(rc) goto done;
+        
+        if(rc) continue;
+        
+        headerBuf.assign(headerptr, recvLen);
+        if(step == 0) {
+            if(headerBuf.find_first_of('*') != std::string::npos) 
+                step = 1;
+        } else if(step == 1) {
+            if(headerBuf.find_first_of('\r') != std::string::npos) {
+                step = 2;
+                continue;
+            }
+            if( headerBuf[0] < '0' || headerBuf[0] > '9') {
+                rc = KV_BAD_COMMAD;
+                goto done;
+            }
+            header += headerBuf;
+        } else if(step == 2) {
+            if(headerBuf.find_first_of('\n') != std::string::npos) {
+                break;
+            } else {
+                rc = KV_BAD_COMMAD;
+                goto done;
+            }
+        }
+        headerBuf.clear();
+        memset(headerptr, 0, 2);
+    }
+
+    str_num =  strtol(header.c_str(), nullptr, 10);
+
+    for(uint64_t i = 0; i < str_num; i++) {
+
+        headerBuf.clear();
+        header.clear();
+        content.clear();
+        memset(headerptr, 0, 2);
+
+        // recv the header of the pck
+        step = 0;
+        while(1)
+        {
+            int recvLen = 1;
+
+            rc = _peer->recvNF(headerptr, recvLen);
+            if(rc == KV_NETWORK_CLOSE) goto done;
+            
+            if(rc) continue;
+            
+            headerBuf.assign(headerptr, recvLen);
+            if(step == 0) {
+                if(headerBuf.find_first_of('$') != std::string::npos) 
+                    step = 1;
+            } else if(step == 1) {
+                if(headerBuf.find_first_of('\r') != std::string::npos) {
+                    step = 2;
+                    continue;
+                }
+                if( headerBuf[0] < '0' || headerBuf[0] > '9') {
+                    rc = KV_BAD_COMMAD;
+                    goto done;
+                }
+                header += headerBuf;
+            } else if(step == 2) {
+                if(headerBuf.find_first_of('\n') != std::string::npos) {
+                    break;
+                } else {
+                    rc = KV_BAD_COMMAD;
+                    goto done;
+                }
+            }
+            headerBuf.clear();
+        }
+
+        contentLen = strtol(header.c_str(), nullptr, 10);
+        std::cout << contentLen << std::endl;
+        contentptr = new char[contentLen];
+
+        // recv the rest content
+        while(content.length() != contentLen)
+        {
+            size_t recvLen = contentLen - content.length();
+
+            rc = _peer->recv(contentptr, recvLen);
+            if(rc == KV_NETWORK_CLOSE) goto done;
+            
+            if(rc) continue;
+            
+            content += std::string(contentptr, recvLen);
+        }
+
+        str.push_back(content);
+    }
+
+done:
+    delete[] headerptr;
+    if(contentptr) delete[] contentptr;
+    return rc;
+}
+
+int Network::sendResult(std::string content)
+{
+    int rc = KV_OK;
+    // pack the msg
+
+    rc = _peer->send(content.c_str(), content.length());
+
+    return rc;
+}
+
+int Network::acceptWithoutCloseBind()
+{
+    int rc = KV_OK;
+    int clientSocket;
+
+    // bind the port
+    ossSocket server(_port);
+    rc = server.initSocket();
+    if(rc) goto done;
+    rc = server.bind_listen();
+    if(rc) goto done;
+
+    // accept a new socket per 1 second
+    while(1) {
+        rc = server.accept((SOCKET *)&clientSocket, NULL, NULL, NETWORK_TIMEOUT);
+        if(rc == KV_TIMEOUT) continue;
+        else break;
+    }
+
+    // close the bind
+    // server.close();
+
+    if(rc) goto done;
+
+    // packet the socket
+    _peer = new ossSocket((SOCKET *)&clientSocket);
+   
+done:
+    return rc;
+}
+
+
 /*
     The functions below are designed for the participant.
     Cause the participant behavior is that:
@@ -91,8 +260,6 @@ int Network::recv(std::string & content)
         if(rc == KV_NETWORK_CLOSE) goto done;
         
         if(rc) continue;
-
-        std::cout << rc << std::endl;
         
         if(headerLen == 0) {
             headerBuf.assign(headerptr, recvLen);
