@@ -4,7 +4,6 @@
 
 void Log::strToLog(std::string str)
 {
-    std::cout << str << std::endl;
     size_t begin = str.find("TXID: ");
     size_t end = str.find("\r\n");
     assert(begin != std::string::npos && end != std::string::npos);

@@ -3,7 +3,7 @@
 
 #include "core.hpp"
 
-#define TXID_START          3
+#define TXID_START          5
 #define SUPER_TXID          0
 #define RECOVERY_TXID       1
 #define ASK_DATA_TXID       2

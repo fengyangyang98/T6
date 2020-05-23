@@ -129,6 +129,8 @@ void Coordinator::pRecovery(p_id id)
 
         std::cout << _pinfo[id].add << ":" << _pinfo[id].port <<" RECOVERY..." << std::endl;
 
+        std::cout << "ID -> " << Log(_pRtask[id]).ID << std::endl;
+        
         if (Log(_pRtask[id]).ID >= TXID_START)
         {
             if (Log(_pRtask[id]).ID != maxTxidTB[id] + 1)
@@ -159,8 +161,6 @@ void Coordinator::pRecovery(p_id id)
                 maxTxidTB[id] += 1;
             }
         }
-
-        
 
     done:
         _pRRetSem[id].pRelease();
@@ -399,14 +399,17 @@ done:
 
 void Coordinator::recoveryFromC(txid min)
 {
-    for (txid tid; tid < _TXID; tid++)
+    for (txid tid = TXID_START; tid < _TXID; tid++)
     {
         // ask for the max tixd of each p
         for (p_id id = 1; id <= _pnum; id++)
         {
             _pRtaskSem[id].pGet();
-            _pRtask[id] = _lg.getLogByTXID(id).logToStr();
+            _pRtask[id] = _lg.getLogByTXID(tid).logToStr();
             _pRtaskSem[id].pRelease();
+
+            _pRRetSem[id].cGet();
+            _pRRetSem[id].cRelease();
         }
     }
 }
@@ -477,9 +480,6 @@ next:
                 _pRRetSem[id].cRelease();
             }
         }
-
-        // finish
-        // NOTE: the survivor must be working state?
     }
 }
 
