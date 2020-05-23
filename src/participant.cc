@@ -3,21 +3,24 @@
 
 int Participant::keepAlive()
 {
+    std::cout << "CONNECTING..." << std::endl;
     _net.close();
-    while (1)
+
+    // try to connect with the coordinator
+    while (_net.reaccept())
     {
-        // try to connect with the coordinator
-        while (_net.reaccept())
-        {
-            sleep(1);
-        }
-    }
+        // sleep(1);
+     }
+
+     std::cout << "CONNECTED..." << std::endl;
+
 
     return KV_OK;
 }
 
 int Participant::Working()
 {
+    std::cout << "WORKING..." << std::endl;
     int rc = KV_OK;
     std::string content;
     std::string rmsg;
@@ -137,11 +140,12 @@ done:
 void Participant::Init(NodeInfo info)
 {
     _TXID   = TXID_START;
-    _net    = Network(info.add, info.port);
+    _net    = Network(info.port);
 }
 
 int Participant::Launch()
 {
+    keepAlive();
     while(1) {
         if(Working()) {
             keepAlive();

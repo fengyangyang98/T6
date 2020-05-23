@@ -14,10 +14,12 @@ int Coordinator::Init(std::vector<NodeInfo> ps, NodeInfo c)
     _cstate = C_RECOVERY;
 
     // set the coordinator network for communication with clients
-    _cnet = Network(c.add, c.port);
+    _cnet = Network(c.port);
 
     // get p number
     _pnum = ps.size();
+
+    _tmpNum = 0;
 
     for (p_id id = 1; id <= (p_id)_pnum; id++)
     {
@@ -27,6 +29,11 @@ int Coordinator::Init(std::vector<NodeInfo> ps, NodeInfo c)
         _pnet[id] = Network(ps[id - 1].add, ps[id - 1].port);
         // set the node info
         _pinfo[id] = ps[id - 1];
+
+        _ptaskSem[id]   = cpLock(1);
+        _pRetSem[id]    = cpLock(1);
+        _pRtaskSem[id]  = cpLock(1);
+        _pRRetSem[id]   = cpLock(1);
     }
 
     return rc;
@@ -82,11 +89,14 @@ void Coordinator::keepAlive(p_id id)
             continue;
         }
 
+        std::cout << _pinfo[id].add << ":" << _pinfo[id].port <<" CONNECTING..." << std::endl;
         // try to connect with the participant
         while (_pnet[id].reconnect())
         {
-            sleep(1);
+            // sleep(1);
         }
+
+        std::cout << _pinfo[id].add << ":" << _pinfo[id].port <<" CONNECTED" << std::endl;
 
         // change the state code
         _recoveryMutex.get();
@@ -115,7 +125,8 @@ void Coordinator::pRecovery(p_id id)
             goto done;
         }
 
-        
+        std::cout << _pinfo[id].add << ":" << _pinfo[id].port <<" RECOVERY..." << std::endl;
+
         if (Log(_pRtask[id]).ID >= TXID_START)
         {
             if (Log(_pRtask[id]).ID != maxTxidTB[id] + 1)
@@ -129,6 +140,7 @@ void Coordinator::pRecovery(p_id id)
 
         // send and recv from p
         rc = _pnet[id].sendAndRecv(task, rmsg);
+        
 
         // any error occurs, close the socket and reconnet for recovering
         if (rc)
@@ -139,7 +151,7 @@ void Coordinator::pRecovery(p_id id)
         }
         else
         {
-            if (rmsg == "DONE")
+            if (rmsg == _parser.getErrorMessage())
             {
                 maxTxidTB[id] += 1;
             }
@@ -163,6 +175,7 @@ void Coordinator::pRecovery(p_id id)
 */
 int Coordinator::Working()
 {
+    std::cout << "WORKING..." << std::endl;
     std::vector<std::string> task;
     while (_cnet.acceptWithoutCloseBind())
     {
@@ -312,9 +325,12 @@ int Coordinator::Recovery()
 
     // waiting for more temp p
     _recoveryMutex.get();
-    if (_tmpNum != 0)
+    if (_tmpNum == 0) {
         goto done;
+    }
+        
 
+    std::cout << "RECOVERY..." << std::endl;
     // put them into recovery mode
     for (auto &s : _pstate)
     {
@@ -335,16 +351,18 @@ int Coordinator::Recovery()
     // get max txid of each p
     for (p_id id = 1; id <= _pnum; id++)
     {
-        _pRetSem[id].cGet();
+        _pRRetSem[id].cGet();
+        std::cout << "hello" << std::endl;
         // check the state
         if (_pworkingRet[id] == KV_OK &&
             _pworkingDataRet[id] != "")
         {
             maxTxidTB[id] = strtol(_pworkingDataRet[id].c_str(), nullptr, 10);
+            std::cout << maxTxidTB[id];
         }
-        _pRetSem[id].cRelease();
+        _pRRetSem[id].cRelease();
     }
-
+    
     
     for(auto entry : maxTxidTB) 
     {
@@ -353,7 +371,15 @@ int Coordinator::Recovery()
         }
     }
 
+    // the next trasaction that I need to broadcast
+    minID += 1;
+
     recoveryFromP(minID);
+
+    for (auto entry : maxTxidTB)
+    {
+        _pstate[entry.second] = P_WORKING;
+    }
 
     // recoveryFromP
 done:
@@ -372,11 +398,6 @@ void Coordinator::recoveryFromC(txid min)
             _pRtask[id] = _lg.getLogByTXID(id).logToStr();
             _pRtaskSem[id].pRelease();
         }
-    }
-
-    for (auto entry : maxTxidTB)
-    {
-        _pstate[entry.second] = P_WORKING;
     }
 }
 
@@ -443,10 +464,6 @@ next:
 
         // finish
         // NOTE: the survivor must be working state?
-        for (auto entry : maxTxidTB)
-        {
-            _pstate[entry.second] = P_WORKING;
-        }
     }
 }
 
@@ -474,9 +491,11 @@ int Coordinator::Launch()
         _trecovery[id] = std::thread(&Coordinator::pRecovery, this, id);
     }
 
+    sleep(2);
+
     while(1) {
-        Working();
         Recovery();
+        Working();   
     }
 
     for(p_id id = 1; id <= _pnum; id++) {

@@ -43,7 +43,7 @@ private:
     sem_t mutex;
 
 public:
-    cpLock(int len=1000)
+    cpLock(int len=1)
     {
         sem_init(&empty,0,len);
         sem_init(&full,0,0);

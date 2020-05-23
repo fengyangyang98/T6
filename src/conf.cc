@@ -38,8 +38,6 @@ bool readConf(std::string conf,
     return false;
   }
 
-  p.reserve(3);
-  
 
   // read
   while (!conf_file.eof())
@@ -75,7 +73,7 @@ bool readConf(std::string conf,
         return false;
       }
       else {
-        c.add = buf.substr(0, pos - 1);
+        c.add = buf.substr(0, pos);
         c.port = strtol((buf.substr(pos + 1)).c_str(), nullptr, 10);
       }
     } 
@@ -91,7 +89,7 @@ bool readConf(std::string conf,
         return false;
       }
       else {
-        tmp.add = buf.substr(0, pos - 1);
+        tmp.add = buf.substr(0, pos);
         tmp.port = strtol((buf.substr(pos + 1)).c_str(), nullptr, 10);
         p.push_back(tmp);
       }

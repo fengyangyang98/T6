@@ -3,10 +3,18 @@
 #include "participant.hpp"
 #include "conf.hpp"
 
-
-
 int main(int argc, char ** argv)
 {   
+
+    if(argc == 1) {
+        std::string msg;
+        while(std::cin >> msg) {
+            std::vector<std::string> list;
+            split(msg, list, ' ');
+        }
+        return 0;
+    }
+
     std::vector<NodeInfo>   pinfo;
     NodeInfo                cinfo;
     Mode                    m = MODE_INVALID;
@@ -28,8 +36,10 @@ int main(int argc, char ** argv)
         c.Launch();
     } else if( m == MODE_P) {
         Participant p;
-        if(pinfo.size() != 1);
-        std::cout << "> ERROR: UNDEFINE THE PARTICIPANT. " << std::endl;
+        if(pinfo.size() != 1) {
+            std::cout << "> ERROR: UNDEFINE THE PARTICIPANT. " << std::endl;
+            return 0;
+        }
         p.Init(pinfo[0]);
         p.Launch();
     }

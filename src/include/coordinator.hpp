@@ -35,7 +35,7 @@ private:
     Network                             _cnet;
 
 
-    p_id                                _pnum;
+    p_id                                _pnum = 0;
     // the participant state table
     std::map<p_id, std::atomic<P_State>>_pstate;
     // the participant network;
@@ -62,7 +62,7 @@ private:
 
 
     // for the recovery
-    int                                 _tmpNum = 0;
+    std::atomic<int>                    _tmpNum;
     std::map<p_id, txid>                maxTxidTB;
     // mutex
     exclusiveLock                       _recoveryMutex;
