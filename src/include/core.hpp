@@ -27,6 +27,8 @@
 #include <malloc.h>
 #include <algorithm>
 #include <cstdlib>
+#include <getopt.h>
+#include <fstream>
 
 // CPP
 #include <string>
@@ -60,6 +62,15 @@
 
 typedef uint64_t    txid;
 typedef uint        p_id;
+
+typedef enum Mode : uint8_t
+{
+    MODE_INVALID,
+    MODE_C,
+    MODE_P
+} Mode;
+
+
 typedef enum P_State : uint8_t
 {
     P_INVALID,
@@ -77,5 +88,11 @@ typedef enum WorkState : uint8_t
     WORK_DONE,
     WORK_ABORT
 } WorkState;
+
+typedef struct NodeInfo
+{
+    std::string add;
+    unsigned int port;
+} NodeInfo;
 
 #endif

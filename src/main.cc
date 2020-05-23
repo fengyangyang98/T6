@@ -1,58 +1,38 @@
 #include "core.hpp"
-#include "test.hpp"
-#include "util.hpp"
 #include "coordinator.hpp"
+#include "participant.hpp"
+#include "conf.hpp"
 
-class hello
-{
-private:
-    std::thread t[10];
-    int number = 0;
-public:
 
-    int sayHello(int i) {
-        sleep(1);
-        std::cout << number << "--" << i << ": Hello" << std::endl;
-        sleep(1);
-        return i;
-    }
 
-    int launch(int i, int n) 
-    {
-        number = n;
-        for(int k = 0; k < i; k++) {
-            t[k] = std::thread(&hello::sayHello,this, k );
-        }
+int main(int argc, char ** argv)
+{   
+    std::vector<NodeInfo>   pinfo;
+    NodeInfo                cinfo;
+    Mode                    m = MODE_INVALID;
+
+    std::string conf = GetOptLong(argc, argv);
+    if( !readConf(conf, pinfo, cinfo, m) ) {
+        std::cout << "> ERROR: CHECK THE CONFIGURE FILE. " << std::endl;
         return 0;
     }
 
-    ~hello() {
-        for(int k = 0; k < 10; k++) {
-            t[k].join();
-        }
+    if( m == MODE_INVALID ) {
+        std::cout << "> ERROR: UNDEFINE THE TYPE OF THE NODE. " << std::endl;
+        return 0;
     }
-};
 
-int main(int argc, char ** argv)
-{    
-    // for (int i = 1; i < argc; i++)
-    // {
-    //     if (argv[i][0] == '-')
-    //     {
-    //         switch (argv[i][1])
-    //         {
-    //             case 'c':
-    //                 network_client_test();
-    //                 break;
-    //             case 's':  
-    //                 network_server_test();
-    //                 break;
-    //             default:
-    //                 break;
-    //         }
-    //     }
-    // }
+    if(m == MODE_C) {
+        Coordinator c;
+        c.Init(pinfo, cinfo);
+        c.Launch();
+    } else if( m == MODE_P) {
+        Participant p;
+        if(pinfo.size() != 1);
+        std::cout << "> ERROR: UNDEFINE THE PARTICIPANT. " << std::endl;
+        p.Init(pinfo[0]);
+        p.Launch();
+    }
 
-    loggerTest();
-    
+    return 0;
 }

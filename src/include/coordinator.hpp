@@ -20,11 +20,7 @@ typedef enum CState : uint8_t
     C_RECOVERY
 } CState;
 
-typedef struct NodeInfo
-{
-    std::string add;
-    unsigned int port;
-} NodeInfo;
+
 
 class Coordinator
 {
@@ -63,8 +59,6 @@ private:
     std::map<p_id, int>                 _pworkingRet;
     // pworking data return
     std::map<p_id, std::string>         _pworkingDataRet;
-    // the participant list
-    std::map<p_id,std::thread>          _tworking;
 
 
     // for the recovery
@@ -84,6 +78,8 @@ private:
 
     // the participant keepalive list
     std::thread                         _talive[MAX_THREAD_NUMBER];
+    std::thread                         _tworking[MAX_THREAD_NUMBER];
+    std::thread                         _trecovery[MAX_THREAD_NUMBER];
 
 private:
 
@@ -94,18 +90,18 @@ private:
     std::string UpdateDB(std::string resp);
     std::string Request(std::string resp);
 
-
-
     void recoveryFromC(txid min);
     void recoveryFromP(txid min);
 
     p_id getRecoveryLeader(txid & id);
 
+    int Recovery();
+    int Working();
+
 public:
 
     int Init(std::vector<NodeInfo> ps, NodeInfo c);
-    int Recovery();
-    int Working();
+    int Launch();
 
     
 };

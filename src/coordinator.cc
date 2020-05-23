@@ -29,12 +29,6 @@ int Coordinator::Init(std::vector<NodeInfo> ps, NodeInfo c)
         _pinfo[id] = ps[id - 1];
     }
 
-    // set the thread
-    for (p_id id = 1; id <= (p_id)ps.size(); id++)
-    {
-        _talive[id] = std::thread(&Coordinator::keepAlive, this, id);
-    }
-
     return rc;
 }
 
@@ -113,6 +107,7 @@ void Coordinator::pRecovery(p_id id)
         int rc = KV_OK;
 
         _pRtaskSem[id].cGet();
+        _pRRetSem[id].pGet();
         // the working
         if (_pstate[id] != P_RECOVERY)
         {
@@ -120,6 +115,7 @@ void Coordinator::pRecovery(p_id id)
             goto done;
         }
 
+        
         if (Log(_pRtask[id]).ID >= TXID_START)
         {
             if (Log(_pRtask[id]).ID != maxTxidTB[id] + 1)
@@ -150,6 +146,7 @@ void Coordinator::pRecovery(p_id id)
         }
 
     done:
+        _pRRetSem[id].pRelease();
         _pRtaskSem[id].cRelease();
     }
 }
@@ -311,7 +308,7 @@ int Coordinator::Recovery()
     txid minID = _TXID - 1;
     maxTxidTB.clear();
     std::map<txid, p_id> task;
-    Log txidReq = Log(RECOVERY_TXID, LOG_PRE, "LOCAL_TXID");
+    Log txidReq = Log(RECOVERY_TXID, LOG_PRE, "");
 
     // waiting for more temp p
     _recoveryMutex.get();
@@ -467,4 +464,25 @@ p_id Coordinator::getRecoveryLeader(txid & id)
 
     id = maxID;
     return maxP;
+}
+
+int Coordinator::Launch()
+{
+    for(p_id id = 1; id <= _pnum; id++) {
+        _talive[id] = std::thread(&Coordinator::keepAlive, this, id);
+        _tworking[id] = std::thread(&Coordinator::pWorking, this, id);
+        _trecovery[id] = std::thread(&Coordinator::pRecovery, this, id);
+    }
+
+    while(1) {
+        Working();
+        Recovery();
+    }
+
+    for(p_id id = 1; id <= _pnum; id++) {
+        _talive[id].join();
+        _tworking[id].join();
+        _trecovery[id].join();
+    }
+    return KV_OK;
 }

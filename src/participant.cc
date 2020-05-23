@@ -49,13 +49,12 @@ std::string Participant::pWorker(std::string task)
             break;
         case RECOVERY_TXID:
             // recovery request, the p should send the max txid
-            return Log(RECOVERY_TXID, LOG_COMMIT, 
-                       std::to_string(_TXID - 1)).logToStr();
+            return std::to_string(_TXID - 1);
             break;
         case ASK_DATA_TXID:
             tid = strtol(l.event.c_str(), nullptr, 10);
             if(tid >= _TXID) {
-                return Log(ASK_DATA_TXID, LOG_COMMIT, "").logToStr();
+                return "";
             } else {
                 return _lg.getLogByTXID(tid).logToStr();
             }
@@ -133,6 +132,12 @@ std::string Participant::eventParser(std::string event)
 
 done:
     return rstr;
+}
+
+void Participant::Init(NodeInfo info)
+{
+    _TXID   = TXID_START;
+    _net    = Network(info.add, info.port);
 }
 
 int Participant::Launch()

@@ -14,9 +14,6 @@ private:
     // the local txid
     txid                _TXID;
 
-    // the state of the node
-    P_State             _state;
-
     // network
     Network             _net;
 
@@ -37,8 +34,8 @@ private:
     std::string eventParser(std::string event);
 
 public:
-    Participant();
-    int Init();
+    Participant() {};
+    void Init(NodeInfo info);
     int Launch();
 };
 
