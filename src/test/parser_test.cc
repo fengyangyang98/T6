@@ -51,10 +51,10 @@ void parserTest()
     std::cout << "[RAW ]\n";
     tmp = "*2\r\n$5\r\nCloud\r\n$9\r\nComputing\r\n";
     tmpA.clear();
-    tmpA = p.parserRESPArry((char *)tmp.c_str());
+    // tmpA = p.parserRESPArry((char *)tmp.c_str());
 
-    for(auto s : tmpA) 
-    {
-        std::cout << s << std::endl;
-    }
+    // for(auto s : tmpA) 
+    // {
+    //     std::cout << s << std::endl;
+    // }
 }

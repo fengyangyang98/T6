@@ -1,5 +1,6 @@
 void parserTest();
 void kvTest();
+void loggerTest();
 
 
 void network_server_test();

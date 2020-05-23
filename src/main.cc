@@ -52,7 +52,7 @@ int main(int argc, char ** argv)
     //         }
     //     }
     // }
-    Coordinator c;
-    c.Working();
+
+    loggerTest();
     
 }

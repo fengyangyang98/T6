@@ -120,16 +120,16 @@ void Coordinator::pRecovery(p_id id)
             goto done;
         }
 
-        if (_pRtask[id].ID > TXID_START)
+        if (Log(_pRtask[id]).ID >= TXID_START)
         {
-            if (_pRtask[id].ID != maxTxidTB[id] + 1)
+            if (Log(_pRtask[id]).ID != maxTxidTB[id] + 1)
             {
                 _precoveryRet[id] = RET_SKIP;
                 goto done;
             }
         }
 
-        task = _pRtask[id].logToStr();
+        task = _pRtask[id];
 
         // send and recv from p
         rc = _pnet[id].sendAndRecv(task, rmsg);
@@ -166,8 +166,6 @@ void Coordinator::pRecovery(p_id id)
 */
 int Coordinator::Working()
 {
-    std::string rc = KV_OK;
-
     std::vector<std::string> task;
     while (_cnet.acceptWithoutCloseBind())
     {
@@ -202,8 +200,6 @@ int Coordinator::Working()
 
 std::string Coordinator::UpdateDB(std::string resp)
 {
-    int rc = KV_OK;
-
     _lg.writeLog(_TXID, LOG_PRE, resp);
 
     // push the work into all the p
@@ -312,6 +308,7 @@ std::string Coordinator::Request(std::string resp)
 int Coordinator::Recovery()
 {
     int rc = KV_OK;
+    txid minID = _TXID - 1;
     maxTxidTB.clear();
     std::map<txid, p_id> task;
     Log txidReq = Log(RECOVERY_TXID, LOG_PRE, "LOCAL_TXID");
@@ -351,6 +348,17 @@ int Coordinator::Recovery()
         _pRetSem[id].cRelease();
     }
 
+    
+    for(auto entry : maxTxidTB) 
+    {
+        if(entry.second < minID) {
+            minID = entry.second;
+        }
+    }
+
+    recoveryFromP(minID);
+
+    // recoveryFromP
 done:
     _recoveryMutex.release();
     return rc;
@@ -381,9 +389,11 @@ void Coordinator::recoveryFromP(txid min)
     txid maxID = 0;
     p_id leader = getRecoveryLeader(maxID);
 
+next:
+
     while (1)
     {
-        p_id leader = getRecoveryLeader(maxID);
+        leader = getRecoveryLeader(maxID);
 
         if (leader == 0)
         {
@@ -440,6 +450,21 @@ void Coordinator::recoveryFromP(txid min)
         {
             _pstate[entry.second] = P_WORKING;
         }
-    next:
     }
+}
+
+p_id Coordinator::getRecoveryLeader(txid & id)
+{
+    txid maxID = _TXID - 1;
+    p_id maxP = 0;
+    for(auto entry : maxTxidTB) 
+    {
+        if(entry.second > maxID) {
+            maxID = entry.second;
+            maxP = entry.first;
+        }
+    }
+
+    id = maxID;
+    return maxP;
 }

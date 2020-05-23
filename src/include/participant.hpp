@@ -2,29 +2,44 @@
 #define PARTICIPANT_HPP_
 
 #include "core.hpp"
+#include "logger.hpp"
+#include "network.hpp"
+#include "parser.hpp"
+#include "kv.hpp"
 
 class Participant
 {
 private:
 
     // the local txid
-    txid _TXID;
+    txid                _TXID;
 
     // the state of the node
-    NodeState _state;
+    P_State             _state;
+
+    // network
+    Network             _net;
 
     // the log
+    Logger              _lg;
+
+    // kv
+    KV                  _kvdb;
+
+    // helper
+    Parser              _parser;
+
+private:
+    int keepAlive();
+    int Working();
+
+    std::string pWorker(std::string task);
+    std::string eventParser(std::string event);
 
 public:
     Participant();
-
     int Init();
-
-    int keepAlive();
-
-    int Recovery();
-
-    int Working();
+    int Launch();
 };
 
 #endif

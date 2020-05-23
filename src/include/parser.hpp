@@ -37,6 +37,7 @@ public:
             e.g. Cloud Computing-> *2\r\n$5\r\nCloud\r\n$9\r\nComputing\r\n
     */
     std::string getRESPArry(std::vector<std::string> & raw);
+    std::string getRESPArry(std::string raw);
 
     /*
         @para message the raw message recieved
@@ -65,7 +66,7 @@ public:
         @return the string vector parsered from message
             e.g. Cloud Computing <- *2\r\n$5\r\nCloud\r\n$9\r\nComputing\r\n
     */
-    std::vector<std::string> parserRESPArry(char * message, int * length=nullptr);
+    void parserRESPArry(char * message, std::vector<std::string> & rc, int * length=nullptr);
 
 
 };

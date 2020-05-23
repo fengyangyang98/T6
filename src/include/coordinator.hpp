@@ -8,9 +8,7 @@
 #include "parser.hpp"
 
 #define MAX_THREAD_NUMBER   1024
-#define TXID_START          3
-#define RECOVERY_TXID       1
-#define ASK_DATA_TXID       2
+
 
 #define RET_SKIP            1
 

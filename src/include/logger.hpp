@@ -3,6 +3,11 @@
 
 #include "core.hpp"
 
+#define TXID_START          3
+#define SUPER_TXID          0
+#define RECOVERY_TXID       1
+#define ASK_DATA_TXID       2
+
 typedef enum logState : uint8_t
 {
     INVALID,
@@ -36,6 +41,11 @@ typedef struct Log
     std::string event;
 
     Log() {}
+
+    Log(std::string str) 
+    {
+        strToLog(str);
+    }
 
     Log(txid id, logState state, std::string event) :
         ID(id), state(state), event(event) { }

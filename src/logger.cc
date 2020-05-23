@@ -11,8 +11,8 @@ void Log::strToLog(std::string str)
     ID = strtol(sID.c_str(), nullptr, 10);
 
     str = str.substr(end + 2);
-    size_t begin = str.find_first_of("S: ");
-    size_t end = str.find_first_of("\r\n");
+    begin = str.find_first_of("S: ");
+    end = str.find_first_of("\r\n");
     assert(begin != std::string::npos && end != std::string::npos);
     std::string sState = str.substr(begin + 3, end - begin - 3);
     state = (logState)strtol(sID.c_str(), nullptr, 10);
