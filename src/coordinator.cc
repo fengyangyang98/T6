@@ -61,7 +61,7 @@ void Coordinator::pWorking(p_id id)
 
         // send and recv from p
         rc = _pnet[id].sendAndRecv(task, rmsg);
-        _pworkingRet[id] = rc;
+        _pworkingDataRet[id] = rc;
 
         // any error occurs, close the socket and reconnet for recovering
         if (rc)
@@ -102,6 +102,57 @@ void Coordinator::keepAlive(p_id id)
     }
 }
 
+void Coordinator::pRecovery(p_id id)
+{
+    assert(_pnet.count(id) == 1);
+
+    while (1)
+    {
+        std::string rmsg = "";
+        std::string task;
+        int rc = KV_OK;
+
+        _pRtaskSem[id].cGet();
+        // the working
+        if (_pstate[id] != P_RECOVERY)
+        {
+            _precoveryRet[id] = RET_SKIP;
+            goto done;
+        }
+
+        if (_pRtask[id].ID > TXID_START)
+        {
+            if (_pRtask[id].ID != maxTxidTB[id] + 1)
+            {
+                _precoveryRet[id] = RET_SKIP;
+                goto done;
+            }
+        }
+
+        task = _pRtask[id].logToStr();
+
+        // send and recv from p
+        rc = _pnet[id].sendAndRecv(task, rmsg);
+
+        // any error occurs, close the socket and reconnet for recovering
+        if (rc)
+        {
+            _pnet[id].close();
+            _pstate[id] = P_WAITING;
+            maxTxidTB.erase(id);
+        }
+        else
+        {
+            if (rmsg == "DONE")
+            {
+                maxTxidTB[id] += 1;
+            }
+        }
+
+    done:
+        _pRtaskSem[id].cRelease();
+    }
+}
 
 /*
     The process is like:
@@ -115,7 +166,7 @@ void Coordinator::keepAlive(p_id id)
 */
 int Coordinator::Working()
 {
-    int rc = KV_OK;
+    std::string rc = KV_OK;
 
     std::vector<std::string> task;
     while (_cnet.acceptWithoutCloseBind())
@@ -143,10 +194,10 @@ int Coordinator::Working()
         rc = _parser.getErrorMessage();
     }
 
-    _cnet.sendResult(rc)
-        _cnet.close();
+    _cnet.sendResult(rc);
+    _cnet.close();
 
-    return rc;
+    return KV_OK;
 }
 
 std::string Coordinator::UpdateDB(std::string resp)
@@ -243,7 +294,6 @@ std::string Coordinator::Request(std::string resp)
     return _parser.getErrorMessage();
 }
 
-
 /*
     The process is like that:
         1. give a txid request to the all p to build a txid table
@@ -252,24 +302,40 @@ std::string Coordinator::Request(std::string resp)
             <- 2. get log
             -> 3. push log into the p
             <- 4. get done flag
+
+    When recovery, I use a very simpley way:
+        1. get the min TXID and max TXID
+        2. ask for the old log from P which max-txid is max
+        3. send the log to other p
+
 */
 int Coordinator::Recovery()
 {
     int rc = KV_OK;
+    maxTxidTB.clear();
+    std::map<txid, p_id> task;
+    Log txidReq = Log(RECOVERY_TXID, LOG_PRE, "LOCAL_TXID");
 
     // waiting for more temp p
     _recoveryMutex.get();
-    if(_tmpNum != 0) goto done;
-    
-    std::map<p_id, txid> maxTxidTB;
-    std::map<txid, p_id> task;
+    if (_tmpNum != 0)
+        goto done;
 
-    std::string txidReq = Log(RECOVERY_TXID, LOG_PRE, "LOCAL_TXID").logToStr();
+    // put them into recovery mode
+    for (auto &s : _pstate)
+    {
+        if (s.second == P_TEMP || s.second == P_WORKING)
+        {
+            s.second = P_RECOVERY;
+        }
+    }
+
+    // ask for the max tixd of each p
     for (p_id id = 1; id <= _pnum; id++)
     {
-        _ptaskSem[id].pGet();
-        _ptask[id] = txidReq;
-        _ptaskSem[id].pRelease();
+        _pRtaskSem[id].pGet();
+        _pRtask[id] = txidReq.logToStr();
+        _pRtaskSem[id].pRelease();
     }
 
     // get max txid of each p
@@ -280,14 +346,100 @@ int Coordinator::Recovery()
         if (_pworkingRet[id] == KV_OK &&
             _pworkingDataRet[id] != "")
         {
-            maxTxidTB[id] = strtol(_pworkingDataRet[id].c_str());
+            maxTxidTB[id] = strtol(_pworkingDataRet[id].c_str(), nullptr, 10);
         }
         _pRetSem[id].cRelease();
     }
 
-
-    
 done:
     _recoveryMutex.release();
     return rc;
+}
+
+void Coordinator::recoveryFromC(txid min)
+{
+    for (txid tid; tid < _TXID; tid++)
+    {
+        // ask for the max tixd of each p
+        for (p_id id = 1; id <= _pnum; id++)
+        {
+            _pRtaskSem[id].pGet();
+            _pRtask[id] = _lg.getLogByTXID(id).logToStr();
+            _pRtaskSem[id].pRelease();
+        }
+    }
+
+    for (auto entry : maxTxidTB)
+    {
+        _pstate[entry.second] = P_WORKING;
+    }
+}
+
+void Coordinator::recoveryFromP(txid min)
+{
+    txid minID = min;
+    txid maxID = 0;
+    p_id leader = getRecoveryLeader(maxID);
+
+    while (1)
+    {
+        p_id leader = getRecoveryLeader(maxID);
+
+        if (leader == 0)
+        {
+            recoveryFromC(minID);
+            break;
+        }
+
+        // put leader into the working state
+        _pstate[leader] = P_WORKING;
+        maxTxidTB.erase(leader);
+
+        // try to get data and send the data to other p
+        for (; minID <= maxID; minID++)
+        {
+            std::string task = Log(ASK_DATA_TXID, LOG_COMMIT, std::to_string(minID)).logToStr();
+            std::string rc = "";
+            _ptaskSem[leader].pGet();
+            _ptask[leader] = task;
+            _ptaskSem[leader].pRelease();
+
+            _pRetSem[leader].cGet();
+            if (_pworkingRet[leader] == KV_OK &&
+                _pworkingDataRet[leader] != "")
+            {
+                rc = _pworkingDataRet[leader];
+            }
+            else
+            {
+                _pRetSem[leader].cRelease();
+                goto next;
+            }
+            _pRetSem[leader].cRelease();
+
+            // for c's log
+            Log tempLog;
+            tempLog.strToLog(rc);
+            if (tempLog.ID == _TXID)
+            {
+                _lg.writeLog(tempLog);
+                _TXID++;
+            }
+
+            for (p_id id = 1; id <= _pnum; id++)
+            {
+                _pRtaskSem[id].pGet();
+                _pRtask[id] = rc;
+                _pRtaskSem[id].pRelease();
+            }
+        }
+
+        // finish
+        // NOTE: the survivor must be working state?
+        for (auto entry : maxTxidTB)
+        {
+            _pstate[entry.second] = P_WORKING;
+        }
+    next:
+    }
 }

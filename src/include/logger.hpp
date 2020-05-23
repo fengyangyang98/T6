@@ -18,7 +18,7 @@ typedef enum logState : uint8_t
 
     The logger will be used when the system in the recovery mode. The 
     coordinator and participants will communicate through the coordinator,
-    and they will choose the latest trasaction ID, and last, the system 
+    and they will choose the latest trasaction ID. At last, the system 
     will be recoveried until the newest trasaction.
 */
 
@@ -35,6 +35,8 @@ typedef struct Log
     logState state;
     std::string event;
 
+    Log() {}
+
     Log(txid id, logState state, std::string event) :
         ID(id), state(state), event(event) { }
     
@@ -43,7 +45,7 @@ typedef struct Log
         state = newState;
     }
 
-    void strToLog();
+    void strToLog(std::string str);
     std::string logToStr();
     
 } Log;
@@ -54,9 +56,11 @@ class Logger
 private:
     std::map<txid, Log> _l;
 public:
-    int writeLog(txid ID, logState state, std::string event);
-    // int writeLog(txid ID, std::vector<std::string> str);
-    int chageLogState(txid ID, logState newState);
+    void writeLog(txid ID, logState state, std::string event);
+    void writeLog(std::string lg);
+    void writeLog(Log lg);
+    void chageLogState(txid ID, logState newState);
+    Log getLogByTXID(txid ID);
 };
 
 

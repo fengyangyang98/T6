@@ -10,6 +10,7 @@
 #define MAX_THREAD_NUMBER   1024
 #define TXID_START          3
 #define RECOVERY_TXID       1
+#define ASK_DATA_TXID       2
 
 #define RET_SKIP            1
 
@@ -70,8 +71,18 @@ private:
 
     // for the recovery
     int                                 _tmpNum = 0;
+    std::map<p_id, txid>                maxTxidTB;
     // mutex
     exclusiveLock                       _recoveryMutex;
+    // task buf
+    std::map<p_id, std::string>         _pRtask;
+    // precovery  return
+    std::map<p_id, int>                 _precoveryRet;
+    // precovery data return
+    std::map<p_id, std::string>         _preoveryDataRet;
+    //lock
+    cpLock                              _pRtaskSem[MAX_THREAD_NUMBER];
+    cpLock                              _pRRetSem[MAX_THREAD_NUMBER];
 
     // the participant keepalive list
     std::thread                         _talive[MAX_THREAD_NUMBER];
@@ -80,7 +91,17 @@ private:
 
     void pWorking(p_id id);
     void keepAlive(p_id id);
+    void pRecovery(p_id id);
     
+    std::string UpdateDB(std::string resp);
+    std::string Request(std::string resp);
+
+
+
+    void recoveryFromC(txid min);
+    void recoveryFromP(txid min);
+
+    p_id getRecoveryLeader(txid & id);
 
 public:
 
@@ -88,8 +109,7 @@ public:
     int Recovery();
     int Working();
 
-    std::string UpdateDB(std::string resp);
-    std::string Request(std::string resp);
+    
 };
                 
 #endif
