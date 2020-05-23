@@ -33,10 +33,10 @@ int Network::recvCommand(std::vector<std::string> & str)
         
         headerBuf.assign(headerptr, recvLen);
         if(step == 0) {
-            if(headerBuf.find_first_of('*') != std::string::npos) 
+            if(headerBuf.find('*') != std::string::npos) 
                 step = 1;
         } else if(step == 1) {
-            if(headerBuf.find_first_of('\r') != std::string::npos) {
+            if(headerBuf.find('\r') != std::string::npos) {
                 step = 2;
                 continue;
             }
@@ -46,7 +46,7 @@ int Network::recvCommand(std::vector<std::string> & str)
             }
             header += headerBuf;
         } else if(step == 2) {
-            if(headerBuf.find_first_of('\n') != std::string::npos) {
+            if(headerBuf.find('\n') != std::string::npos) {
                 break;
             } else {
                 rc = KV_BAD_COMMAD;
@@ -79,10 +79,10 @@ int Network::recvCommand(std::vector<std::string> & str)
             
             headerBuf.assign(headerptr, recvLen);
             if(step == 0) {
-                if(headerBuf.find_first_of('$') != std::string::npos) 
+                if(headerBuf.find('$') != std::string::npos) 
                     step = 1;
             } else if(step == 1) {
-                if(headerBuf.find_first_of('\r') != std::string::npos) {
+                if(headerBuf.find('\r') != std::string::npos) {
                     step = 2;
                     continue;
                 }
@@ -92,7 +92,7 @@ int Network::recvCommand(std::vector<std::string> & str)
                 }
                 header += headerBuf;
             } else if(step == 2) {
-                if(headerBuf.find_first_of('\n') != std::string::npos) {
+                if(headerBuf.find('\n') != std::string::npos) {
                     break;
                 } else {
                     rc = KV_BAD_COMMAD;
@@ -103,7 +103,6 @@ int Network::recvCommand(std::vector<std::string> & str)
         }
 
         contentLen = strtol(header.c_str(), nullptr, 10);
-        std::cout << contentLen << std::endl;
         contentptr = new char[contentLen];
 
         // recv the rest content
@@ -263,8 +262,8 @@ int Network::recv(std::string & content)
         
         if(headerLen == 0) {
             headerBuf.assign(headerptr, recvLen);
-            if(headerBuf.find_first_of('~') != std::string::npos) {
-                pos = headerBuf.find_first_of('~');
+            if(headerBuf.find('~') != std::string::npos) {
+                pos = headerBuf.find('~');
                 header = headerBuf.substr(pos, recvLen - pos);
                 headerLen += recvLen - pos;
             }
@@ -366,8 +365,8 @@ int Network::sendAndRecv(std::string smsg, std::string & rmsg)
         
         if(header.length() == 0) {
             headerBuf.assign(headerptr, recvLen);
-            if(headerBuf.find_first_of('~') != std::string::npos) {
-                pos = headerBuf.find_first_of('~');
+            if(headerBuf.find('~') != std::string::npos) {
+                pos = headerBuf.find('~');
                 header = headerBuf.substr(pos, recvLen - pos);
                 headerLen += recvLen - pos;
             }

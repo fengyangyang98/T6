@@ -40,7 +40,7 @@ done:
 
 std::string Participant::pWorker(std::string task)
 {
-    std::string rc = "";
+    std::string rc = _parser.getErrorMessage();
     txid tid;
     // parser the task
     Log l(task);
@@ -48,7 +48,7 @@ std::string Participant::pWorker(std::string task)
     switch(l.ID)
     {
         case SUPER_TXID:
-            // reserve
+            return eventParser(l.event);
             break;
         case RECOVERY_TXID:
             // recovery request, the p should send the max txid
@@ -63,14 +63,13 @@ std::string Participant::pWorker(std::string task)
             }
             break;
         default:
-            if(l.ID == _TXID) {
-                return Log(l.ID, LOG_ABORT, "").logToStr();
-            } else {
-                if(l.state == LOG_COMMIT) {
-                    _lg.writeLog(l);
-                    _TXID++;
-                }
-                return Log(l.ID, LOG_COMMIT, eventParser(l.event)).logToStr();
+            // std::cout << "info: " << l.ID << " " << l.state << std::endl;
+            if(l.ID == _TXID && l.state == LOG_PRE) {
+                return "PRE";
+            } else if(l.ID == _TXID && l.state == LOG_COMMIT) {
+                _lg.writeLog(l);
+                _TXID++;
+                return eventParser(l.event);
             }
             break;
     }
@@ -81,19 +80,10 @@ std::string Participant::pWorker(std::string task)
 
 std::string Participant::eventParser(std::string event)
 {
-    std::string rstr = "";
-    int rc = KV_OK;
+    std::string rstr = _parser.getErrorMessage();
     int delnumber = 0;
     
     std::vector<std::string> comds;
-
-    // if network close will return error
-    rc = _net.recv(event);
-    if(rc) {
-        rstr = _parser.getErrorMessage();
-        goto done;
-    }
-
     // parse and send
     _parser.parserRESPArry((char *)event.c_str(), comds);
 
@@ -118,6 +108,7 @@ std::string Participant::eventParser(std::string event)
             }
             break;
         case 'G': // GET key
+            std::cout << "GET " << comds.size() << std::endl;
             if(comds.size() != 2) {
                 rstr = _parser.getErrorMessage();
             } else {
@@ -125,7 +116,7 @@ std::string Participant::eventParser(std::string event)
             }
             break;
         case 'P': // P
-            rstr = _parser.getRESPArry("PRE");
+            rstr = "PRE";
             break;
         default:
             rstr = _parser.getErrorMessage();

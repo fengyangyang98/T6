@@ -4,18 +4,19 @@
 
 void Log::strToLog(std::string str)
 {
-    size_t begin = str.find_first_of("TXID: ");
-    size_t end = str.find_first_of("\r\n");
+    std::cout << str << std::endl;
+    size_t begin = str.find("TXID: ");
+    size_t end = str.find("\r\n");
     assert(begin != std::string::npos && end != std::string::npos);
     std::string sID = str.substr(begin + 6, end - begin - 6);
     ID = strtol(sID.c_str(), nullptr, 10);
 
     str = str.substr(end + 2);
-    begin = str.find_first_of("S: ");
-    end = str.find_first_of("\r\n");
+    begin = str.find("S: ");
+    end = str.find("\r\n");
     assert(begin != std::string::npos && end != std::string::npos);
     std::string sState = str.substr(begin + 3, end - begin - 3);
-    state = (logState)strtol(sID.c_str(), nullptr, 10);
+    state = (logState)strtol(sState.c_str(), nullptr, 10);
 
     str = str.substr(end + 4);
     event = str;

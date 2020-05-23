@@ -51,6 +51,7 @@ void Coordinator::pWorking(p_id id)
 
         _ptaskSem[id].cGet();
         _pRetSem[id].pGet();
+
         // the working
         if (_pstate[id] != P_WORKING)
         {
@@ -62,7 +63,8 @@ void Coordinator::pWorking(p_id id)
 
         // send and recv from p
         rc = _pnet[id].sendAndRecv(task, rmsg);
-        _pworkingDataRet[id] = rc;
+        _pworkingRet[id] = rc;
+        _pworkingDataRet[id] = rmsg;
 
         // any error occurs, close the socket and reconnet for recovering
         if (rc)
@@ -140,7 +142,8 @@ void Coordinator::pRecovery(p_id id)
 
         // send and recv from p
         rc = _pnet[id].sendAndRecv(task, rmsg);
-        
+        _precoveryRet[id] = rc;
+        _preoveryDataRet[id] = rmsg;
 
         // any error occurs, close the socket and reconnet for recovering
         if (rc)
@@ -151,11 +154,13 @@ void Coordinator::pRecovery(p_id id)
         }
         else
         {
-            if (rmsg == _parser.getErrorMessage())
+            if (rmsg == _parser.getSuccessMessage())
             {
                 maxTxidTB[id] += 1;
             }
         }
+
+        
 
     done:
         _pRRetSem[id].pRelease();
@@ -228,7 +233,7 @@ std::string Coordinator::UpdateDB(std::string resp)
         _pRetSem[id].cGet();
         // check the state
         if (_pworkingRet[id] == KV_OK &&
-            _pworkingDataRet[id] == "")
+            _pworkingDataRet[id] == "PRE")
         {
             vote = true;
         }
@@ -236,7 +241,8 @@ std::string Coordinator::UpdateDB(std::string resp)
     }
 
     // give the commit
-    bool commit = false;
+    bool commit = false ;
+    std::string rc = _parser.getErrorMessage();
     if (vote == true)
     {
         std::string commitReq = Log(_TXID, LOG_COMMIT, resp).logToStr();
@@ -253,9 +259,10 @@ std::string Coordinator::UpdateDB(std::string resp)
             _pRetSem[id].cGet();
             // check the state
             if (_pworkingRet[id] == KV_OK &&
-                _pworkingDataRet[id] == "done")
+                _pworkingDataRet[id] != _parser.getErrorMessage())
             {
                 commit = true;
+                rc = _pworkingDataRet[id];
             }
             _pRetSem[id].cRelease();
         }
@@ -269,7 +276,8 @@ std::string Coordinator::UpdateDB(std::string resp)
     {
         // push the log into the logger
         _lg.chageLogState(_TXID, LOG_COMMIT);
-        return _parser.getSuccessMessage();
+        _TXID++;
+        return rc;
     }
     else
     {
@@ -279,11 +287,12 @@ std::string Coordinator::UpdateDB(std::string resp)
 
 std::string Coordinator::Request(std::string resp)
 {
+    std::string getReq = Log(SUPER_TXID, LOG_COMMIT, resp).logToStr();
     // push the work into all the p
     for (p_id id = 1; id <= _pnum; id++)
     {
         _ptaskSem[id].pGet();
-        _ptask[id] = resp;
+        _ptask[id] = getReq;
         _ptaskSem[id].pRelease();
 
         _pRetSem[id].cGet();
@@ -322,6 +331,7 @@ int Coordinator::Recovery()
     maxTxidTB.clear();
     std::map<txid, p_id> task;
     Log txidReq = Log(RECOVERY_TXID, LOG_PRE, "");
+    bool consistance = true;
 
     // waiting for more temp p
     _recoveryMutex.get();
@@ -329,7 +339,6 @@ int Coordinator::Recovery()
         goto done;
     }
         
-
     std::cout << "RECOVERY..." << std::endl;
     // put them into recovery mode
     for (auto &s : _pstate)
@@ -352,34 +361,35 @@ int Coordinator::Recovery()
     for (p_id id = 1; id <= _pnum; id++)
     {
         _pRRetSem[id].cGet();
-        std::cout << "hello" << std::endl;
         // check the state
-        if (_pworkingRet[id] == KV_OK &&
-            _pworkingDataRet[id] != "")
+        if (_precoveryRet[id] == KV_OK &&
+            _preoveryDataRet[id] != "")
         {
-            maxTxidTB[id] = strtol(_pworkingDataRet[id].c_str(), nullptr, 10);
-            std::cout << maxTxidTB[id];
+            maxTxidTB[id] = strtol(_preoveryDataRet[id].c_str(), nullptr, 10);
+            if(maxTxidTB[id] != _TXID - 1) consistance = false;
         }
         _pRRetSem[id].cRelease();
     }
     
-    
-    for(auto entry : maxTxidTB) 
-    {
-        if(entry.second < minID) {
-            minID = entry.second;
+    if(!consistance) {
+        for(auto entry : maxTxidTB) 
+        {
+            if(entry.second < minID) {
+                minID = entry.second;
+            }
         }
+
+        // the next trasaction that I need to broadcast
+        minID += 1;
+        recoveryFromP(minID);
     }
-
-    // the next trasaction that I need to broadcast
-    minID += 1;
-
-    recoveryFromP(minID);
 
     for (auto entry : maxTxidTB)
     {
-        _pstate[entry.second] = P_WORKING;
+        if(entry.second == _TXID - 1)
+            _pstate[entry.first] = P_WORKING;
     }
+    _tmpNum = 0;
 
     // recoveryFromP
 done:
@@ -426,12 +436,15 @@ next:
         // try to get data and send the data to other p
         for (; minID <= maxID; minID++)
         {
+            // send the ask task
             std::string task = Log(ASK_DATA_TXID, LOG_COMMIT, std::to_string(minID)).logToStr();
             std::string rc = "";
             _ptaskSem[leader].pGet();
             _ptask[leader] = task;
             _ptaskSem[leader].pRelease();
 
+
+            // get the log
             _pRetSem[leader].cGet();
             if (_pworkingRet[leader] == KV_OK &&
                 _pworkingDataRet[leader] != "")
@@ -459,6 +472,9 @@ next:
                 _pRtaskSem[id].pGet();
                 _pRtask[id] = rc;
                 _pRtaskSem[id].pRelease();
+
+                _pRRetSem[id].cGet();
+                _pRRetSem[id].cRelease();
             }
         }
 

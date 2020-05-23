@@ -7,11 +7,38 @@ int main(int argc, char ** argv)
 {   
 
     if(argc == 1) {
+
+        std::string add = "127.0.0.1";
+        ossSocket client;
         std::string msg;
-        while(std::cin >> msg) {
+        Parser p;
+
+        while(getline(std::cin, msg)) {
+            client = ossSocket(add.c_str(), 8001);
+
+            client.initSocket();
+            while( client.connect() ) { }
+
             std::vector<std::string> list;
-            split(msg, list, ' ');
+            split(msg, list, ' ');       
+
+            std::string pac = p.getRESPArry(list);
+            client.send(pac.c_str(), pac.length(), 100000000);
+
+            char * p = new char[1024];
+            memset(p, 0, 1024);
+            int len = 1024;
+            while(client.recvNF(p, len, 100000)) {}
+
+            std::string msg2(p, len);
+            std::cout << msg2;
+
+            delete[] p;
+            msg.clear();
         }
+
+        
+        
         return 0;
     }
 

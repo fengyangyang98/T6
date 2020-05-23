@@ -3,7 +3,7 @@
         @param raw the raw string you want to warp into the string message
         @return a string message
             e.g. CS06142 -> $7\r\nCS06142\r\n
-    */
+*/
 std::string Parser::getStringMessage(std::string & raw)
 {
     std::string rc = "$";
@@ -59,9 +59,9 @@ std::string Parser::getRESPArry(std::vector<std::string> & raw)
     rc += std::to_string(number);
     rc += "\r\n";
     
-    for(auto & s : raw) 
+    for(size_t i = 0; i < raw.size(); i++) 
     {
-        rc += getStringMessage(s);
+        rc += getStringMessage(raw[i]);
     }
 
     return rc;

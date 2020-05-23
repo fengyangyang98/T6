@@ -10,3 +10,5 @@ src/test/socket_test/server
 src/test/test.sh
 
 *.conf
+
+.vscode
