@@ -93,14 +93,14 @@ void Coordinator::keepAlive(p_id id)
             continue;
         }
 
-        std::cout << _pinfo[id].add << ":" << _pinfo[id].port <<" CONNECTING..." << std::endl;
+        std::cout << getTime() << _pinfo[id].add << ":" << _pinfo[id].port <<" CONNECTING..." << std::endl;
         // try to connect with the participant
         while (_pnet[id].reconnect())
         {
             // sleep(1);
         }
 
-        std::cout << _pinfo[id].add << ":" << _pinfo[id].port <<" CONNECTED" << std::endl;
+        std::cout << getTime() << _pinfo[id].add << ":" << _pinfo[id].port <<" CONNECTED" << std::endl;
 
         // change the state code
         _recoveryMutex.get();
@@ -129,9 +129,9 @@ void Coordinator::pRecovery(p_id id)
             goto done;
         }
 
-        std::cout << _pinfo[id].add << ":" << _pinfo[id].port <<" RECOVERY..." << std::endl;
+        std::cout << getTime() << _pinfo[id].add << ":" << _pinfo[id].port <<" RECOVERY..." << std::endl;
 
-        std::cout << "ID -> " << Log(_pRtask[id]).ID << std::endl;
+        std::cout << getTime() << "TXID -> " << Log(_pRtask[id]).ID << std::endl;
         
         if (Log(_pRtask[id]).ID >= TXID_START)
         {
@@ -182,7 +182,7 @@ void Coordinator::pRecovery(p_id id)
 */
 int Coordinator::Working()
 {
-    std::cout << "WORKING..." << std::endl;
+    std::cout << getTime() << "WORKING..." << std::endl;
     std::vector<std::string> task;
     while (_cnet.acceptWithoutCloseBind())
     {
@@ -191,7 +191,7 @@ int Coordinator::Working()
     _cnet.recvCommand(task);
 
     std::string resp = _parser.getRESPArry(task);
-    std::string rc;
+    std::string rc = _parser.getErrorMessage();
 
     if (task.size() < 1)
     {
@@ -199,7 +199,10 @@ int Coordinator::Working()
         goto done;
     }
 
-    while(_cstate != C_WORKING) { }
+    while(_cstate != C_WORKING) {
+        sleep(0.5); 
+        goto done;
+    }
 
     // lock
     _workingMutex.get();
@@ -219,11 +222,8 @@ int Coordinator::Working()
 
 done:
     _cnet.sendResult(rc);
-    sleep(0.02);
+    sleep(0.1);
     _cnet.close();
-
-    // unlock
-    _workingMutex.release();
 
     return KV_OK;
 }
@@ -349,7 +349,7 @@ int Coordinator::Recovery()
     bool consistance = true;
 
     // waiting for more temp p
-    while(_tmpNum == 0) {  sleep(0.5); }
+    while(_tmpNum == 0) {  sleep(0.1); }
     _cstate = C_RECOVERY;
 
     _recoveryMutex.get();
@@ -381,6 +381,7 @@ int Coordinator::Recovery()
         if (_precoveryRet[id] == KV_OK &&
             _preoveryDataRet[id] != "")
         {
+            
             maxTxidTB[id] = strtol(_preoveryDataRet[id].c_str(), nullptr, 10);
             if(maxTxidTB[id] != _TXID - 1) consistance = false;
         }

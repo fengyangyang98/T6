@@ -29,7 +29,7 @@ std::string Parser::getSuccessMessage()
     */
 std::string Parser::getErrorMessage()
 {
-    std::string rc = "-ERROR\r\n";
+    std::string rc = ".ERROR\r\n";
     return rc;
 }
 

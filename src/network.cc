@@ -132,7 +132,7 @@ int Network::sendResult(std::string content)
     int rc = KV_OK;
     // pack the msg
 
-    rc = _peer->send(content.c_str(), content.length());
+    rc = _peer->send(content.c_str(), content.length() + 1);
 
     return rc;
 }

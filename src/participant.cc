@@ -3,7 +3,7 @@
 
 int Participant::keepAlive()
 {
-    std::cout << "CONNECTING..." << std::endl;
+    std::cout << getTime() << "CONNECTING..." << std::endl;
     _net.close();
 
     // try to connect with the coordinator
@@ -12,7 +12,7 @@ int Participant::keepAlive()
         // sleep(1);
      }
 
-     std::cout << "CONNECTED..." << std::endl;
+     std::cout << getTime() << "CONNECTED..." << std::endl;
 
 
     return KV_OK;
@@ -20,7 +20,7 @@ int Participant::keepAlive()
 
 int Participant::Working()
 {
-    std::cout << "WORKING..." << std::endl;
+    std::cout << getTime() << "WORKING..." << std::endl;
     int rc = KV_OK;
     std::string content;
     std::string rmsg;
