@@ -137,31 +137,45 @@ int Network::sendResult(std::string content)
     return rc;
 }
 
+int  Network::initBind()
+{
+    int rc = KV_OK;
+
+    if(_server != nullptr) {
+        delete _server;
+        _server = nullptr;
+    }
+
+    // bind the port
+    _server = new ossSocket(_port);
+    rc = _server->initSocket();
+    if(rc) goto done;
+    rc = _server->bind_listen();
+    if(rc) goto done;
+
+done:
+    return rc;
+}
+
 int Network::acceptWithoutCloseBind()
 {
     int rc = KV_OK;
     int clientSocket;
 
-    // bind the port
-    ossSocket server(_port);
-    rc = server.initSocket();
-    if(rc) goto done;
-    rc = server.bind_listen();
-    if(rc) goto done;
+    if(_server == nullptr) {
+        rc = KV_NETWORK_CLOSE;
+        goto done;
+    }
 
     // accept a new socket per 1 second
     while(1) {
-        rc = server.accept((SOCKET *)&clientSocket, NULL, NULL, NETWORK_TIMEOUT);
+        rc = _server->accept((SOCKET *)&clientSocket, NULL, NULL, NETWORK_TIMEOUT);
         if(rc == KV_TIMEOUT) continue;
         else break;
     }
 
-    // close the bind
-    // server.close();
 
     if(rc) goto done;
-
-    // packet the socket
     _peer = new ossSocket((SOCKET *)&clientSocket);
    
 done:

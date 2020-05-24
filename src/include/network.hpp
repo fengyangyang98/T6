@@ -34,6 +34,7 @@ private:
     std::string NETWORK_CON_PACK = "~" + numtob<uint64_t>(0);
 
     ossSocket * _peer = nullptr;
+    ossSocket * _server = nullptr;
 
     // for the coordinator
     std::string _peerAddress;
@@ -67,12 +68,18 @@ public:
             delete _peer;
             _peer = nullptr;
         }
+
+        if(_server != nullptr) {
+            delete _server;
+            _server = nullptr;
+        }
         return KV_OK;
     }
 
     int recvCommand(std::vector<std::string> & content);
     int sendResult(std::string str);
     int acceptWithoutCloseBind();
+    int initBind();
 
     // for the participant
     int send(std::string msg);

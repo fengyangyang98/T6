@@ -30,9 +30,12 @@ private:
     txid                                _TXID;
 
     // the state of the coordinator
-    CState                              _cstate;
+    std::atomic<CState>                 _cstate;
     // the network of the coordinator
     Network                             _cnet;
+
+    std::thread                         _workThread;
+    std::thread                         _recoveryThread;
 
 
     p_id                                _pnum = 0;
@@ -59,6 +62,7 @@ private:
     std::map<p_id, int>                 _pworkingRet;
     // pworking data return
     std::map<p_id, std::string>         _pworkingDataRet;
+    exclusiveLock                       _workingMutex;
 
 
     // for the recovery
@@ -75,6 +79,7 @@ private:
     //lock
     cpLock                              _pRtaskSem[MAX_THREAD_NUMBER];
     cpLock                              _pRRetSem[MAX_THREAD_NUMBER];
+    cpLock                              _recoveryTemp;
 
     // the participant keepalive list
     std::thread                         _talive[MAX_THREAD_NUMBER];
@@ -97,6 +102,9 @@ private:
 
     int Recovery();
     int Working();
+
+    void work();
+    void recovery();
 
 public:
 

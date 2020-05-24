@@ -7,8 +7,8 @@ kvstore2pcsystem
 *.o
 src/test/socket_test/client
 src/test/socket_test/server
-src/test/test.sh
 
+
+*.sh
 *.conf
-
 .vscode

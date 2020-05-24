@@ -36,6 +36,8 @@ int Coordinator::Init(std::vector<NodeInfo> ps, NodeInfo c)
         _pRRetSem[id]   = cpLock(1);
     }
 
+    _recoveryTemp = cpLock(_tmpNum);
+
     return rc;
 }
 
@@ -184,6 +186,7 @@ int Coordinator::Working()
     std::vector<std::string> task;
     while (_cnet.acceptWithoutCloseBind())
     {
+        _cnet.initBind();
     }
     _cnet.recvCommand(task);
 
@@ -193,8 +196,14 @@ int Coordinator::Working()
     if (task.size() < 1)
     {
         rc = _parser.getErrorMessage();
+        goto done;
     }
-    else if (task[0] == "SET" || task[0] == "DEL")
+
+    while(_cstate != C_WORKING) { }
+
+    // lock
+    _workingMutex.get();
+    if (task[0] == "SET" || task[0] == "DEL")
     {
         rc = UpdateDB(resp);
     }
@@ -206,9 +215,15 @@ int Coordinator::Working()
     {
         rc = _parser.getErrorMessage();
     }
+    _workingMutex.release();
 
+done:
     _cnet.sendResult(rc);
+    sleep(0.02);
     _cnet.close();
+
+    // unlock
+    _workingMutex.release();
 
     return KV_OK;
 }
@@ -334,11 +349,12 @@ int Coordinator::Recovery()
     bool consistance = true;
 
     // waiting for more temp p
+    while(_tmpNum == 0) {  sleep(0.5); }
+    _cstate = C_RECOVERY;
+
     _recoveryMutex.get();
-    if (_tmpNum == 0) {
-        goto done;
-    }
-        
+    _workingMutex.get();
+
     std::cout << "RECOVERY..." << std::endl;
     // put them into recovery mode
     for (auto &s : _pstate)
@@ -389,11 +405,12 @@ int Coordinator::Recovery()
         if(entry.second == _TXID - 1)
             _pstate[entry.first] = P_WORKING;
     }
+    
     _tmpNum = 0;
-
-    // recoveryFromP
-done:
+    _workingMutex.release();
     _recoveryMutex.release();
+    
+     _cstate = C_WORKING;
     return rc;
 }
 
@@ -499,6 +516,22 @@ p_id Coordinator::getRecoveryLeader(txid & id)
     return maxP;
 }
 
+void Coordinator::work()
+{
+    while(1) 
+    {
+        Working();
+    }
+}
+
+void Coordinator::recovery()
+{
+    while(1)
+    {
+        Recovery();
+    }
+}
+
 int Coordinator::Launch()
 {
     for(p_id id = 1; id <= _pnum; id++) {
@@ -507,17 +540,19 @@ int Coordinator::Launch()
         _trecovery[id] = std::thread(&Coordinator::pRecovery, this, id);
     }
 
-    sleep(2);
+     _workThread = std::thread(&Coordinator::work, this);
 
-    while(1) {
-        Recovery();
-        Working();   
-    }
+    // waiting all the p start for a while
+    sleep(2);
+    
+    _recoveryThread = std::thread(&Coordinator::recovery, this);
 
     for(p_id id = 1; id <= _pnum; id++) {
         _talive[id].join();
         _tworking[id].join();
         _trecovery[id].join();
+        _workThread.join();
+        _recoveryThread.join();
     }
     return KV_OK;
 }
