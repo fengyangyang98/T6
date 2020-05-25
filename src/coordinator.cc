@@ -158,7 +158,7 @@ void Coordinator::pRecovery(p_id id)
         }
         else
         {
-            if (rmsg == _parser.getSuccessMessage())
+            if (rmsg != _parser.getErrorMessage())
             {
                 maxTxidTB[id] += 1;
             }
@@ -254,6 +254,8 @@ std::string Coordinator::UpdateDB(std::string resp)
         }
         _pRetSem[id].cRelease();
     }
+
+    // std::cout << "VOTE: " << vote << std::endl;
 
     // give the commit
     bool commit = false ;
@@ -403,8 +405,9 @@ int Coordinator::Recovery()
 
     for (auto entry : maxTxidTB)
     {
-        if(entry.second == _TXID - 1)
+        if(entry.second == _TXID - 1) {
             _pstate[entry.first] = P_WORKING;
+        }
     }
     
     _tmpNum = 0;

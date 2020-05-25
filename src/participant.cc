@@ -30,6 +30,8 @@ int Participant::Working()
     rc = _net.recv(content);
     if(rc) goto done;
 
+    // std::cout << content << std::endl;
+
     // parse and send
     rmsg = pWorker(content);
     _net.send(rmsg);
@@ -67,9 +69,12 @@ std::string Participant::pWorker(std::string task)
             if(l.ID == _TXID && l.state == LOG_PRE) {
                 return "PRE";
             } else if(l.ID == _TXID && l.state == LOG_COMMIT) {
-                _lg.writeLog(l);
-                _TXID++;
-                return eventParser(l.event);
+                rc = eventParser(l.event);
+                if(rc != _parser.getErrorMessage()) {
+                    _lg.writeLog(l);
+                    _TXID++;
+                }
+                return rc;
             }
             break;
     }
